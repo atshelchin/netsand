@@ -57,11 +57,18 @@ pub fn stop() -> Result<(), String> {
     let state = DaemonState::load()
         .ok_or("daemon is not running")?;
 
-    // Send SIGTERM
+    // Terminate the daemon process
+    #[cfg(unix)]
     let status = std::process::Command::new("kill")
         .arg(state.pid.to_string())
         .status()
         .map_err(|e| format!("kill: {e}"))?;
+
+    #[cfg(windows)]
+    let status = std::process::Command::new("taskkill")
+        .args(["/PID", &state.pid.to_string(), "/F"])
+        .status()
+        .map_err(|e| format!("taskkill: {e}"))?;
 
     if status.success() {
         DaemonState::cleanup();

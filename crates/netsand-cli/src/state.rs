@@ -58,10 +58,7 @@ impl DaemonState {
 
     pub fn is_daemon_running() -> bool {
         if let Some(state) = Self::load() {
-            // Check if PID is alive
-            unsafe {
-                libc_kill(state.pid as i32, 0) == 0
-            }
+            is_pid_alive(state.pid)
         } else {
             false
         }
@@ -73,13 +70,31 @@ impl DaemonState {
     }
 }
 
-fn libc_kill(pid: i32, sig: i32) -> i32 {
-    // Simple check if process exists without importing libc crate
-    let status = std::process::Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .output();
-    match status {
-        Ok(o) if o.status.success() => 0,
-        _ => -1,
+fn is_pid_alive(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        let status = std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+        matches!(status, Ok(s) if s.success())
     }
+
+    #[cfg(windows)]
+    {
+        let output = std::process::Command::new("tasklist")
+            .args(["/FI", &format!("PID eq {}", pid), "/NH"])
+            .output();
+        match output {
+            Ok(o) => {
+                let out = String::from_utf8_lossy(&o.stdout);
+                out.contains(&pid.to_string())
+            }
+            Err(_) => false,
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    false
 }

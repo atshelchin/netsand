@@ -46,6 +46,10 @@ pub fn run(profile_name: &str, command: &[String]) -> Result<i32, String> {
     // Wait for child
     let status = child.wait().map_err(|e| format!("wait: {e}"))?;
 
+    // Cleanup: remove OS-level sandbox rules
+    #[cfg(target_os = "windows")]
+    crate::sandbox::windows::cleanup_all();
+
     // Deregister
     if let Some(mut state) = DaemonState::load() {
         state.processes.retain(|p| p.pid != child_pid);
