@@ -1,0 +1,25 @@
+[profile]
+name = "bot"
+description = "Polymarket trading bot"
+listen_port = 8001
+
+[allow]
+domains = [
+    "gamma-api.polymarket.com",
+    "ws-subscriptions-clob.polymarket.com",
+    "data-api.polymarket.com",
+    "stream.binance.com",
+]
+ips = []
+
+[upstream]
+proxy = "socks5://127.0.0.1:1080"
+domains = [
+    "gamma-api.polymarket.com",
+    "ws-subscriptions-clob.polymarket.com",
+    "data-api.polymarket.com",
+]
+ips = []
+
+[sandbox]
+user = "botuser"

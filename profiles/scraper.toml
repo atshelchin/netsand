@@ -1,0 +1,15 @@
+[profile]
+name = "scraper"
+description = "Web scraper with limited access"
+listen_port = 8002
+
+[allow]
+domains = [
+    "api.coingecko.com",
+    "pro-api.coinmarketcap.com",
+]
+ips = []
+
+[sandbox]
+# No upstream proxy — direct connection
+# No user — env-only isolation
