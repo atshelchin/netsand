@@ -49,6 +49,8 @@ pub fn run(profile_name: &str, command: &[String]) -> Result<i32, String> {
     // Cleanup: remove OS-level sandbox rules
     #[cfg(target_os = "windows")]
     crate::sandbox::windows::cleanup_all();
+    #[cfg(target_os = "macos")]
+    crate::sandbox::macos::cleanup_all();
 
     // Deregister
     if let Some(mut state) = DaemonState::load() {
