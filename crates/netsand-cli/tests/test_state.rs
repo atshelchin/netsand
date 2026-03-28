@@ -1,7 +1,7 @@
 use netsand::state::{DaemonState, ProfilePort, ProcessInfo};
 
 #[test]
-fn test_state_get_port() {
+fn test_get_port() {
     let state = DaemonState {
         pid: 1234,
         profiles: vec![
@@ -16,8 +16,13 @@ fn test_state_get_port() {
 }
 
 #[test]
+fn test_get_port_empty() {
+    let state = DaemonState::default();
+    assert_eq!(state.get_port("anything"), None);
+}
+
+#[test]
 fn test_state_save_load() {
-    // Use a temp dir to avoid polluting real state
     let tmp = std::env::temp_dir().join("netsand-test-state");
     std::fs::create_dir_all(&tmp).ok();
     let state_file = tmp.join("test-state.json");
@@ -44,8 +49,34 @@ fn test_state_save_load() {
     assert_eq!(loaded.pid, 9999);
     assert_eq!(loaded.profiles.len(), 1);
     assert_eq!(loaded.profiles[0].name, "test");
+    assert_eq!(loaded.profiles[0].port, 8888);
     assert_eq!(loaded.processes.len(), 1);
     assert_eq!(loaded.processes[0].pid, 1111);
+    assert_eq!(loaded.processes[0].command, "echo hello");
 
     std::fs::remove_dir_all(&tmp).ok();
+}
+
+#[test]
+fn test_default_state() {
+    let state = DaemonState::default();
+    assert_eq!(state.pid, 0);
+    assert!(state.profiles.is_empty());
+    assert!(state.processes.is_empty());
+}
+
+#[test]
+fn test_state_serialization_roundtrip() {
+    let state = DaemonState {
+        pid: 42,
+        profiles: vec![
+            ProfilePort { name: "a".into(), port: 8001 },
+            ProfilePort { name: "b".into(), port: 8002 },
+        ],
+        processes: vec![],
+    };
+    let json = serde_json::to_string(&state).unwrap();
+    let loaded: DaemonState = serde_json::from_str(&json).unwrap();
+    assert_eq!(loaded.pid, 42);
+    assert_eq!(loaded.profiles.len(), 2);
 }

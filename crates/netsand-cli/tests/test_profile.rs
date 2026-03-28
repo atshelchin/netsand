@@ -1,10 +1,9 @@
 use std::path::{Path, PathBuf};
 
 fn profiles_dir() -> PathBuf {
-    // CARGO_MANIFEST_DIR points to crates/netsand-cli/
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent().unwrap() // crates/
-        .parent().unwrap() // workspace root
+        .parent().unwrap()
+        .parent().unwrap()
         .join("profiles")
 }
 
@@ -41,9 +40,10 @@ fn test_load_all_profiles() {
 }
 
 #[test]
-fn test_default_port_assignment() {
+fn test_default_port_used_when_not_specified() {
+    // scraper.toml has explicit listen_port=8002, so default is ignored
     let p = netsand::profile::Profile::load(&profiles_dir().join("scraper.toml"), 7777).unwrap();
-    assert_eq!(p.listen_port, 8002); // explicit wins over default
+    assert_eq!(p.listen_port, 8002);
 }
 
 #[test]
@@ -54,4 +54,33 @@ fn test_invalid_profile_path() {
 #[test]
 fn test_invalid_profile_dir() {
     assert!(netsand::profile::load_all(Path::new("/nonexistent/dir")).is_err());
+}
+
+#[test]
+fn test_malformed_toml() {
+    let tmp = std::env::temp_dir().join("netsand-bad.toml");
+    std::fs::write(&tmp, "this is not valid [[[toml").unwrap();
+    assert!(netsand::profile::Profile::load(&tmp, 8001).is_err());
+    std::fs::remove_file(&tmp).ok();
+}
+
+#[test]
+fn test_missing_profile_section() {
+    let tmp = std::env::temp_dir().join("netsand-no-profile.toml");
+    std::fs::write(&tmp, "[allow]\ndomains = [\"example.com\"]\n").unwrap();
+    assert!(netsand::profile::Profile::load(&tmp, 8001).is_err());
+    std::fs::remove_file(&tmp).ok();
+}
+
+#[test]
+fn test_profile_with_only_required_fields() {
+    let tmp = std::env::temp_dir().join("netsand-minimal.toml");
+    std::fs::write(&tmp, "[profile]\nname = \"minimal\"\n").unwrap();
+    let p = netsand::profile::Profile::load(&tmp, 9000).unwrap();
+    assert_eq!(p.name, "minimal");
+    assert_eq!(p.listen_port, 9000); // uses default
+    assert!(p.policy.allowed_domains.is_empty());
+    assert!(p.policy.upstream.is_none());
+    assert!(p.sandbox_user.is_none());
+    std::fs::remove_file(&tmp).ok();
 }
